@@ -20,7 +20,7 @@ public class DemandeController {
 
     // Soumettre une demande
     @PostMapping("/soumettre")
-    public Demande soumettre(@RequestBody DemandeDto dto) {
+    public Demande soumettre(@ModelAttribute DemandeDto dto) {
         return demandeService.soumettreDemande(dto);
     }
 

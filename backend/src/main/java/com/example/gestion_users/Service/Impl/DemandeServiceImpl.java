@@ -12,9 +12,17 @@ import com.example.gestion_users.Entity.Demande;
 import com.example.gestion_users.Entity.Administrateur;
 import com.example.gestion_users.Dao.DemandeRepository;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+
 
 @Service
 public class DemandeServiceImpl implements DemandeService {
@@ -43,6 +51,31 @@ public class DemandeServiceImpl implements DemandeService {
         demande.setReference("REF-" + randomNumber);
         demande.setDateDepot(LocalDateTime.now());
         demande.setStatus(StatusDemande.SOUMISE);
+        demande.setDescription(dto.getDescription());
+
+
+
+
+        if (dto.getFichier() != null && !dto.getFichier().isEmpty()) {
+            try {
+                Path uploadPath = Paths.get("uploads");
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath); // créer dossier si besoin
+                }
+
+                String fileName = System.currentTimeMillis() + "_" + dto.getFichier().getOriginalFilename();
+                Path destination = uploadPath.resolve(fileName);
+
+                Files.copy(dto.getFichier().getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
+
+                demande.setNomFichier(fileName);
+
+
+            } catch (IOException e) {
+                // transformer IOException en RuntimeException
+                throw new RuntimeException("Erreur lors de l'upload du fichier", e);
+            }
+        }
 
         return demandeRepository.save(demande);
     }

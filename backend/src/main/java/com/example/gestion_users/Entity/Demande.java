@@ -25,6 +25,11 @@ public class Demande {
     private Demandeur demandeur;
     private String typeDemande;
 
+    private String description;
+
+    private String nomFichier;
+
+
 
     public Long getId() {
         return id;
@@ -88,5 +93,21 @@ public class Demande {
 
     public void setTypeDemande(String typeDemande) {
         this.typeDemande = typeDemande;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getNomFichier() {
+        return nomFichier;
+    }
+
+    public void setNomFichier(String nomFichier) {
+        this.nomFichier = nomFichier;
     }
 }
