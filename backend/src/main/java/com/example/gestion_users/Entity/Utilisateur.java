@@ -1,6 +1,5 @@
 package com.example.gestion_users.Entity;
 
-
 import jakarta.persistence.*;
 
 @Entity
@@ -50,7 +49,27 @@ public class Utilisateur {
         return cni;
     }
 
+    public void setCni(String cni) {
+        this.cni = cni;
+    }
+
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public void setNom(String nom) {
+        this.nom = nom;
+    }
+
+    public void setPrenom(String prenom) {
+        this.prenom = prenom;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 }

@@ -1,6 +1,5 @@
 package com.example.gestion_users.Controller;
 
-
 import com.example.gestion_users.Entity.Demande;
 import com.example.gestion_users.Entity.StatusDemande;
 import com.example.gestion_users.Service.facade.DemandeService;
@@ -60,6 +59,30 @@ public class DemandeController {
     @GetMapping("/{id}")
     public Demande getById(@PathVariable Long id) {
         return demandeService.consulterDemande(id);
+    }
+
+    // Consulter les demandes d'un demandeur
+    @GetMapping("/mes-demandes/{id}")
+    public List<Demande> getDemandeByDemandeurId(@PathVariable Long id) {
+        return demandeService.consulterMesDemandes(id);
+    }
+
+    // Télécharger un fichier
+    @GetMapping("/download/{fileName}")
+    public org.springframework.core.io.Resource downloadFile(@PathVariable String fileName) {
+        try {
+            java.nio.file.Path filePath = java.nio.file.Paths.get("uploads").resolve(fileName).normalize();
+            org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(
+                    filePath.toUri());
+
+            if (resource.exists()) {
+                return resource;
+            } else {
+                throw new RuntimeException("Fichier introuvable: " + fileName);
+            }
+        } catch (java.net.MalformedURLException e) {
+            throw new RuntimeException("Erreur lors du téléchargement", e);
+        }
     }
 
     // Filtrer par status

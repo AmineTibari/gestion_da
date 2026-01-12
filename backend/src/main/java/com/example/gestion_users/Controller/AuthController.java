@@ -18,14 +18,11 @@ public class AuthController {
     public Utilisateur login(@RequestBody LoginRequest request) {
         return utilisateurService.seConnecter(
                 request.getEmail(),
-                request.getPassword()
-        );
+                request.getPassword());
     }
 
     @PostMapping("/register")
     public Utilisateur register(@RequestBody Utilisateur utilisateur, @RequestParam(required = false) String type) {
         return utilisateurService.creerCompte(utilisateur, type);
     }
-
-
 }

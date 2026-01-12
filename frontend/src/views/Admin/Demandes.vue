@@ -1,255 +1,468 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
-
-// Liste des demandes
 const demandes = ref([]);
-
-// État de chargement et erreur
 const loading = ref(true);
-const error = ref(null);
+const searchQuery = ref("");
+const statusFilter = ref("all");
 
-// Filtre par status (ex: "EN_ATTENTE", "VALIDE", "REJETE")
-const statusFilter = ref("");
+onMounted(async () => {
+  await fetchDemandes();
+});
 
-// Fonction pour charger toutes les demandes
 const fetchDemandes = async () => {
-  loading.value = true;
-  error.value = null;
   try {
-    let url = "http://localhost:8093/api/demandes/";
-    if (statusFilter.value) {
-      url = `http://localhost:8093/api/demandes/filtrer?status=${statusFilter.value}`;
-    }
-    const res = await axios.get(url);
+    const res = await axios.get("http://localhost:8093/api/demandes/");
     demandes.value = res.data;
-    console.log(demandes.value.id);
   } catch (err) {
-    error.value = "Erreur lors du chargement des demandes.";
-    console.error(err);
+    console.error("Error loading demandes", err);
   } finally {
     loading.value = false;
   }
 };
 
-// Recharger les demandes au montage du component
-onMounted(() => {
-  fetchDemandes();
+const filteredDemandes = computed(() => {
+  let result = demandes.value;
+  
+  if (statusFilter.value !== "all") {
+    result = result.filter(d => d.status === statusFilter.value);
+  }
+  
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(d => 
+      d.reference?.toLowerCase().includes(query) ||
+      d.titreDemande?.toLowerCase().includes(query) ||
+      d.demandeur?.nom?.toLowerCase().includes(query)
+    );
+  }
+  
+  return result;
 });
 
-// Fonctions pour changer le status et filtrer
-const handleFilterChange = () => {
-  fetchDemandes();
-};
+const statusCounts = computed(() => ({
+  all: demandes.value.length,
+  SOUMISE: demandes.value.filter(d => d.status === 'SOUMISE').length,
+  EN_TRAITEMENT: demandes.value.filter(d => d.status === 'EN_TRAITEMENT').length,
+  VALIDEE: demandes.value.filter(d => d.status === 'VALIDEE').length,
+  REJETEE: demandes.value.filter(d => d.status === 'REJETEE').length,
+}));
 
 const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0'); // الشهور تبدأ من 0
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("fr-FR");
 };
 
 const formatStatus = (status) => {
-  if (status == "SOUMISE") {
-    return "Nouveau";
-  } else if (status == "EN_TRAITEMENT") {
-    return "En cours";
-  } else if (status == "VALIDEE") {
-    return "Validee";
-  } else if (status == "REJETEE") {
-    return "Refusee";
-  }
-}
+  const statuses = {
+    SOUMISE: "Nouveau",
+    EN_TRAITEMENT: "En cours",
+    VALIDEE: "Validée",
+    REJETEE: "Refusée"
+  };
+  return statuses[status] || status;
+};
 
 const goToDemande = (id) => {
-  router.push(`/demandes/${id}`);
-}
-
-
+  router.push(`/admin/demandes/${id}`);
+};
 </script>
 
 <template>
-    <div class="demandes-container">
+  <div class="page-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1>Demandes</h1>
+        <p>Gérez les demandes administratives</p>
+      </div>
+    </div>
 
-      <div class="header">
-        <h2>Gestion des demandes</h2>
-
-        <div class="filter">
-          <label>Status :</label>
-          <select v-model="statusFilter" @change="handleFilterChange">
-            <option value="">Tous</option>
-            <option value="SOUMISE">Nouveau</option>
-            <option value="EN_TRAITEMENT">En cours</option>
-            <option value="VALIDEE">Validée</option>
-            <option value="REJETEE">Refusée</option>
-          </select>
-        </div>
+    <!-- Filters -->
+    <div class="filters-section">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input 
+          v-model="searchQuery" 
+          type="text" 
+          placeholder="Rechercher par référence, titre ou demandeur..."
+        />
       </div>
 
-      <div v-if="loading" class="loading">Chargement...</div>
-      <div v-else-if="error" class="error">{{ error }}</div>
+      <div class="status-tabs">
+        <button 
+          :class="['tab', { active: statusFilter === 'all' }]"
+          @click="statusFilter = 'all'">
+          Tous <span class="count">{{ statusCounts.all }}</span>
+        </button>
+        <button 
+          :class="['tab', 'tab-new', { active: statusFilter === 'SOUMISE' }]"
+          @click="statusFilter = 'SOUMISE'">
+          Nouveau <span class="count">{{ statusCounts.SOUMISE }}</span>
+        </button>
+        <button 
+          :class="['tab', 'tab-progress', { active: statusFilter === 'EN_TRAITEMENT' }]"
+          @click="statusFilter = 'EN_TRAITEMENT'">
+          En cours <span class="count">{{ statusCounts.EN_TRAITEMENT }}</span>
+        </button>
+        <button 
+          :class="['tab', 'tab-done', { active: statusFilter === 'VALIDEE' }]"
+          @click="statusFilter = 'VALIDEE'">
+          Validées <span class="count">{{ statusCounts.VALIDEE }}</span>
+        </button>
+        <button 
+          :class="['tab', 'tab-rejected', { active: statusFilter === 'REJETEE' }]"
+          @click="statusFilter = 'REJETEE'">
+          Refusées <span class="count">{{ statusCounts.REJETEE }}</span>
+        </button>
+      </div>
+    </div>
 
-      <table v-else-if="demandes.length">
+    <!-- Loading -->
+    <div v-if="loading" class="loading-state">
+      <div class="spinner"></div>
+      <span>Chargement des demandes...</span>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="filteredDemandes.length === 0" class="empty-state">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+      <h3>Aucune demande trouvée</h3>
+      <p>Essayez de modifier vos filtres de recherche</p>
+    </div>
+
+    <!-- Table -->
+    <div v-else class="table-container">
+      <table class="data-table">
         <thead>
-        <tr>
-          <th>Référence</th>
-          <th>Demandeur</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Date Dépôt</th>
-          <th>Administrateur</th>
-          <th></th>
-        </tr>
+          <tr>
+            <th>Référence</th>
+            <th>Titre</th>
+            <th>Demandeur</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody>
-        <tr v-for="demande in demandes" :key="demande.id">
-          <td>{{ demande.reference }}</td>
-          <td>{{ demande.demandeur?.nom }} {{ demande.demandeur?.prenom }}</td>
-          <td>{{ demande.titreDemande }}</td>
-
-          <td>
-          <span :class="['status-badge', demande.status]">
-            {{ formatStatus(demande.status) }}
-          </span>
-          </td>
-
-          <td>{{ formatDate(demande.dateDepot) }}</td>
-
-          <td>
-          <span v-if="demande.administrateur">
-            {{ demande.administrateur.nom }}
-          </span>
-            <span class="badge-unassigned" v-else>
-            Non assignée
-          </span>
-          </td>
-          <td class="voir" >
-            <FontAwesomeIcon :icon="['fas', 'eye']" style="color: #1e3a8a;" @click="() => goToDemande(demande.id)" />
-          </td>
-        </tr>
+          <tr v-for="d in filteredDemandes" :key="d.id" @click="goToDemande(d.id)">
+            <td class="ref-cell">
+              <span class="ref-badge">{{ d.reference }}</span>
+            </td>
+            <td>{{ d.titreDemande }}</td>
+            <td class="demandeur-cell">
+              <div class="demandeur-info">
+                <div class="avatar">{{ d.demandeur?.nom?.[0] }}</div>
+                <span>{{ d.demandeur?.nom }} {{ d.demandeur?.prenom }}</span>
+              </div>
+            </td>
+            <td>{{ formatDate(d.dateDepot) }}</td>
+            <td>
+              <span :class="['status-badge', d.status]">
+                {{ formatStatus(d.status) }}
+              </span>
+            </td>
+            <td>
+              <button class="action-btn" @click.stop="goToDemande(d.id)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
         </tbody>
       </table>
-
-      <div v-if="!loading && !demandes.length" class="no-results">
-        Aucune demande trouvée.
-      </div>
-
     </div>
+  </div>
 </template>
 
 <style scoped>
-
-* {
-  font-family: "Poppins", sans-serif;
+.page-container {
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.header h2 {
-  font-family: "Poppins", sans-serif;
-  font-weight: 600;
+/* Header */
+.page-header {
+  margin-bottom: 32px;
 }
 
+.page-header h1 {
+  color: white;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
 
+.page-header p {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 15px;
+  margin: 0;
+}
 
-.demandes-container {
-  padding: 20px;
+/* Filters */
+.filters-section {
+  margin-bottom: 24px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
 }
 
-.header {
+.search-box {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 18px;
+  max-width: 500px;
 }
 
-.header .filter label {
-  margin-right: 10px;
-}
-.header .filter select {
-  width: 140px;
+.search-box svg {
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
 }
 
-.filter select {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #888;
+.search-box input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.search-box input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.search-box input:focus {
   outline: none;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+.status-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-th {
-  background: #1e3a8a;
-  color: white;
-  padding: 15px 10px;
-}
-
-td {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-th, td {
-  text-align: center;
-}
-
-.voir {
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-.loading {
-  font-size: 15px;
+.tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
 }
 
-.no-results {
-  padding: 10px;
-  color: #777;
+.tab.active {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: rgba(6, 182, 212, 0.3);
+  color: #22d3ee;
 }
 
-/* Badges */
-.status-badge {
-  padding: 4px 8px;
+.tab .count {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
   border-radius: 6px;
   font-size: 12px;
-  font-weight: bold;
+}
+
+.tab.active .count {
+  background: rgba(6, 182, 212, 0.3);
+}
+
+/* Loading & Empty */
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #06b6d4;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.empty-state svg {
+  margin-bottom: 20px;
+  opacity: 0.3;
+}
+
+.empty-state h3 {
   color: white;
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+/* Table */
+.table-container {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.data-table td {
+  padding: 16px 20px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.data-table tbody tr {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ref-badge {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.demandeur-cell .demandeur-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.demandeur-cell .avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .status-badge.SOUMISE {
-  background: #3b82f6;  /* Bleu */
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
 }
 
 .status-badge.EN_TRAITEMENT {
-  background: #f59e0b; /* Orange */
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
 }
 
 .status-badge.VALIDEE {
-  background: #10b981; /* Vert */
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
 }
 
 .status-badge.REJETEE {
-  background: #ef4444; /* Rouge */
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
 }
 
-.badge-unassigned {
-  padding: 3px 6px;
-  border-radius: 6px;
-  background: #9ca3af;
-  color: white;
-  font-size: 12px;
+.action-btn {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
+.action-btn:hover {
+  background: rgba(6, 182, 212, 0.15);
+  color: #22d3ee;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .page-container { padding: 20px; }
+  .status-tabs { flex-wrap: wrap; }
+  .data-table { font-size: 13px; }
+  .data-table th, .data-table td { padding: 12px 10px; }
+  .demandeur-cell .demandeur-info span { display: none; }
+}
+
+@media (max-width: 600px) {
+  .page-header h1 { font-size: 22px; }
+  .table-container { overflow-x: auto; }
+  .data-table { min-width: 600px; }
+}
 </style>

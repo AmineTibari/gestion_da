@@ -22,4 +22,8 @@ public class Administrateur extends Utilisateur {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+
+
+
 }

@@ -1,8 +1,6 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faIdCard, faEnvelope, faUser, faUserTie, faKey } from '@fortawesome/free-solid-svg-icons';
 
 const router = useRouter();
 const user = ref(null);
@@ -17,169 +15,241 @@ const logout = () => {
   localStorage.removeItem("user");
   router.push("/login");
 };
+
+const userInitials = computed(() => {
+  if (!user.value) return "";
+  return (user.value.nom?.[0] || "") + (user.value.prenom?.[0] || "");
+});
 </script>
 
 <template>
-  <div class="profil-admin" v-if="user">
-    <div class="profile-card">
-      <!-- Header -->
-      <div class="profile-header">
-        <div class="avatar">{{ user.nom?.charAt(0) }}</div>
-        <div class="user-basic">
-          <h2>{{ user.nom }} {{ user.prenom }}</h2>
-          <p style="margin-bottom: 8px">{{ user.email }}</p>
-          <span class="role">{{ user.role }}</span>
-        </div>
-      </div>
+  <div class="page-container">
+    <div class="page-header">
+      <h1>Mon Profil</h1>
+      <p>Gérez vos informations personnelles</p>
+    </div>
 
-      <!-- Info -->
-      <div class="profile-info">
-        <div class="info-item">
-          <FontAwesomeIcon :icon="faIdCard" class="info-icon"/>
-          <span class="info-label">CNI</span>
-          <span class="info-value">{{ user.cni }}</span>
+    <div v-if="user" class="profile-content">
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="avatar-large">{{ userInitials }}</div>
+          <div class="profile-name">
+            <h2>{{ user.nom }} {{ user.prenom }}</h2>
+            <span class="role-badge">{{ user.role || 'Administrateur' }}</span>
+          </div>
         </div>
-        <div class="info-item">
-          <FontAwesomeIcon :icon="faUserTie" class="info-icon"/>
-          <span class="info-label">Fonction</span>
-          <span class="info-value">{{ user.titreFonction }}</span>
-        </div>
-        <div class="info-item">
-          <FontAwesomeIcon :icon="faKey" class="info-icon"/>
-          <span class="info-label">Mot de passe</span>
-          <span class="info-value">••••••••</span>
-        </div>
-      </div>
 
-      <!-- Logout -->
-      <div class="profile-actions">
-        <button @click="logout">Se Déconnecter</button>
+        <div class="profile-details">
+          <div class="detail-item">
+            <div class="detail-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <div class="detail-content">
+              <label>Email</label>
+              <span>{{ user.email }}</span>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <div class="detail-content">
+              <label>CNI</label>
+              <span>{{ user.cni || 'Non renseigné' }}</span>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div class="detail-content">
+              <label>Fonction</label>
+              <span>{{ user.titreFonction || 'Non renseigné' }}</span>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <div class="detail-content">
+              <label>Mot de passe</label>
+              <span>••••••••</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-actions">
+          <button class="logout-btn" @click="logout">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Se déconnecter
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-
-  <div v-else>
-    <p>Chargement des informations...</p>
   </div>
 </template>
 
 <style scoped>
-
-* {
-  font-family: "Poppins", sans-serif;
+.page-container {
+  padding: 32px;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.profil-admin {
-  padding: 32px;
-  display: flex;
-  justify-content: center;
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-header h1 {
+  color: white;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.page-header p {
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
 }
 
 .profile-card {
-  width: 100%;
-  max-width: 500px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.3s ease;
 }
-
 
 .profile-header {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  padding: 24px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(139, 92, 246, 0.2));
+  padding: 32px;
   display: flex;
-  gap: 16px;
   align-items: center;
+  gap: 20px;
 }
 
-.avatar {
+.avatar-large {
   width: 80px;
   height: 80px;
-  background: rgba(255,255,255,0.3);
-  border-radius: 50%;
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+  border-radius: 20px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  font-size: 32px;
-  font-weight: bold;
-}
-
-.user-basic h2 {
-  margin: 0;
-  font-size: 20px;
+  justify-content: center;
+  color: white;
+  font-size: 28px;
   font-weight: 700;
 }
-.user-basic p {
-  margin: 4px 0;
-  font-size: 14px;
+
+.profile-name h2 {
+  color: white;
+  font-size: 24px;
+  margin: 0 0 8px;
 }
-.user-basic .role {
+
+.role-badge {
   display: inline-block;
-  background: rgba(255,255,255,0.3);
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
   font-weight: 600;
 }
 
-.profile-info {
-  padding: 16px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.profile-details {
+  padding: 24px 32px;
 }
 
-.info-item {
+.detail-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: #f9fafb;
-  padding: 12px 16px;
+  gap: 16px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 14px;
+  margin-bottom: 12px;
+  transition: background 0.2s;
+}
+
+.detail-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.detail-icon {
+  width: 44px;
+  height: 44px;
+  background: rgba(6, 182, 212, 0.15);
   border-radius: 12px;
-  transition: background 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #22d3ee;
 }
-.info-item:hover {
-  background: #eff6ff;
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
 }
-.info-icon {
-  color: #667eea;
-  font-size: 20px;
-  min-width: 28px;
-}
-.info-label {
+
+.detail-content label {
+  color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  flex: 1;
+  font-weight: 500;
+  text-transform: uppercase;
+  margin-bottom: 4px;
 }
-.info-value {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1f2937;
+
+.detail-content span {
+  color: white;
+  font-size: 15px;
 }
 
 .profile-actions {
-  padding: 16px 24px;
-  display: flex;
-  justify-content: center;
+  padding: 24px 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
-.profile-actions button {
-  padding: 10px 24px;
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+  color: #f87171;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s;
 }
-.profile-actions button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 </style>

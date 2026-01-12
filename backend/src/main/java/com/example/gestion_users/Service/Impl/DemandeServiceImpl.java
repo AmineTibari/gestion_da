@@ -23,7 +23,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
-
 @Service
 public class DemandeServiceImpl implements DemandeService {
 
@@ -47,14 +46,11 @@ public class DemandeServiceImpl implements DemandeService {
         demande.setTitreDemande(dto.getTitreDemande());
         demande.setTypeDemande(dto.getTypeDemande());
         demande.setDemandeur(demandeur);
-        int randomNumber = (int)(Math.random() * 90000) + 10000;
+        int randomNumber = (int) (Math.random() * 90000) + 10000;
         demande.setReference("REF-" + randomNumber);
         demande.setDateDepot(LocalDateTime.now());
         demande.setStatus(StatusDemande.SOUMISE);
         demande.setDescription(dto.getDescription());
-
-
-
 
         if (dto.getFichier() != null && !dto.getFichier().isEmpty()) {
             try {
@@ -69,7 +65,6 @@ public class DemandeServiceImpl implements DemandeService {
                 Files.copy(dto.getFichier().getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
 
                 demande.setNomFichier(fileName);
-
 
             } catch (IOException e) {
                 // transformer IOException en RuntimeException
@@ -128,7 +123,6 @@ public class DemandeServiceImpl implements DemandeService {
                 .orElseThrow(() -> new RuntimeException("Demande introuvable"));
     }
 
-
     @Override
     public Demande assignerDemande(Long idDemande, Long idAdmin) {
         Demande demande = demandeRepository.findById(idDemande)
@@ -141,6 +135,11 @@ public class DemandeServiceImpl implements DemandeService {
         demande.setStatus(StatusDemande.EN_TRAITEMENT);
 
         return demandeRepository.save(demande);
+    }
+
+    @Override
+    public List<Demande> consulterMesDemandes(Long idDemandeur) {
+        return demandeRepository.findByDemandeurId(idDemandeur);
     }
 
 }
